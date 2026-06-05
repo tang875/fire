@@ -1,0 +1,2747 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>未来空间 Master 控制大屏</title>
+    <!-- 引入 CryptoJS 加密库，用于在网页端本地动态计算 OneNET 鉴权 Token -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f1f5f9; /* 极轻奢云雾白底色 */
+            --panel-bg: rgba(255, 255, 255, 0.62); /* 重水晶高透玻璃 */
+            --panel-border: rgba(255, 255, 255, 0.5); /* 水晶高光边框线 */
+            --text-primary: #0f172a; /* 炭墨色，极佳的印刷级质感 */
+            --text-secondary: #64748b; /* 优雅的冷灰色 */
+            
+            /* 精调高保真状态主色 */
+            --color-active: #2563eb; 
+            --color-safe: #059669; 
+            --color-warn: #d97706; 
+            --color-danger: #e11d48; 
+            --glow-cyan: #06b6d4;
+            --glow-purple: #8b5cf6;
+            --glow-emerald: #10b981;
+            --glow-amber: #f59e0b;
+            --glow-rose: #f43f5e; 
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", sans-serif;
+            -webkit-font-smoothing: antialiased; /* 极佳的文字边缘平滑质感 */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            /* 多层极光微光叠加，营造高级氛围感 */
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(129, 140, 248, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 0%, rgba(139, 92, 246, 0.06) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(244, 63, 94, 0.04) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        /* 极清高透水晶玻璃面板 */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--panel-border);
+            border-radius: 28px;
+            box-shadow: 
+                0 4px 30px rgba(15, 23, 42, 0.03), 
+                0 30px 60px rgba(15, 23, 42, 0.04), 
+                inset 0 1px 1px rgba(255, 255, 255, 0.8), /* 顶端3D物理高光折射 */
+                inset 0 -1px 1px rgba(0, 0, 0, 0.01);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 登录页样式 */
+        .login-box {
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 40px 80px rgba(15, 23, 42, 0.06);
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+            animation: loginIntro 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes loginIntro {
+            from { opacity: 0; transform: translateY(30px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .login-brand {
+            position: relative;
+            width: 76px;
+            height: 76px;
+            margin: 0 auto 24px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+        }
+
+        .brand-avatar {
+            font-size: 30px;
+            z-index: 2;
+            filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.3));
+        }
+
+        .brand-glow-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse-avatar 2s infinite alternate;
+        }
+
+        @keyframes pulse-avatar {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .login-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 35px;
+            font-weight: 500;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper .input-icon {
+            position: absolute;
+            left: 18px;
+            color: #94a3b8;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 16px 20px 16px 50px; 
+            background: rgba(15, 23, 42, 0.015);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 14px;
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #6366f1;
+            background: #ffffff;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.06);
+        }
+
+        .input-wrapper input:focus + .input-icon {
+            color: #6366f1;
+            filter: drop-shadow(0 0 3px rgba(99, 102, 241, 0.4));
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 8px 30px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(79, 70, 229, 0.35);
+        }
+
+        .btn-secondary {
+            background: rgba(15, 23, 42, 0.03);
+            color: var(--text-primary);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            margin-top: 14px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(15, 23, 42, 0.06);
+        }
+
+        .switch-tab {
+            text-align: center;
+            margin-top: 24px;
+            color: #4f46e5;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-block;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .switch-tab::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            transform: scaleX(0);
+            height: 1.5px;
+            bottom: -3px;
+            left: 0;
+            background-color: #4f46e5;
+            transform-origin: bottom right;
+            transition: transform 0.25s ease-out;
+        }
+
+        .switch-tab:hover {
+            color: #312e81;
+        }
+
+        .switch-tab:hover::after {
+            transform: scaleX(1);
+            transform-origin: bottom left;
+        }
+
+        /* 监控大屏 */
+        .dashboard {
+            width: 100%;
+            max-width: 1400px;
+            display: none;
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .dashboard.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 顶部通栏 */
+        .top-bar {
+            padding: 20px 30px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-icon {
+            font-size: 32px;
+            filter: drop-shadow(0 0 4px rgba(79, 70, 229, 0.3));
+        }
+
+        .top-bar h1 {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--text-primary);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(15, 23, 42, 0.03);
+            padding: 4px 12px;
+            border-radius: 30px;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+
+        .status-dot.online {
+            background: var(--color-safe);
+            box-shadow: 0 0 10px var(--color-safe);
+            animation: pulse-dot 2s infinite;
+        }
+
+        .status-dot.connecting {
+            background: var(--color-warn);
+            box-shadow: 0 0 10px var(--color-warn);
+        }
+
+        .status-dot.offline {
+            background: var(--color-danger);
+            box-shadow: 0 0 10px var(--color-danger);
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background: rgba(244, 63, 94, 0.08);
+            color: #e11d48;
+            border: 1px solid rgba(244, 63, 94, 0.15);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: var(--color-danger);
+            color: white;
+            box-shadow: 0 8px 20px rgba(244, 63, 94, 0.2);
+        }
+
+        /* 双栏工作空间 */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        @media (min-width: 1024px) {
+            .workspace-grid {
+                grid-template-columns: 320px 1fr;
+                align-items: stretch; /* ★ 强制拉伸左右两栏高度对齐 */
+            }
+        }
+
+        /* 左侧边面板 */
+        .aside-board {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.01);
+        }
+
+        .clock-widget {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+        }
+
+        .clock-time {
+            font-size: 38px;
+            font-weight: 900;
+            letter-spacing: -1.5px; /* 精调高端时钟字重 */
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .clock-date {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        /* 全息扫描雷达 */
+        .radar-widget {
+            background: rgba(15, 23, 42, 0.01);
+            border: 1px solid rgba(15, 23, 42, 0.03);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .radar-title {
+            font-size: 11px;
+            color: var(--glow-cyan);
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .radar-container {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            margin: 10px auto;
+            border-radius: 50%;
+            border: 1px solid rgba(8, 145, 178, 0.2);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .radar-sweep {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: conic-gradient(from 0deg, rgba(8, 145, 178, 0.4) 0deg, transparent 270deg); /* 增强扫描发光梯度 */
+            border-radius: 50%;
+            animation: radar-spin 4s linear infinite;
+        }
+
+        .radar-grid-mid {
+            position: absolute;
+            width: 70%;
+            height: 70%;
+            border-radius: 50%;
+            border: 1px dashed rgba(8, 145, 178, 0.12);
+        }
+
+        .radar-grid-inner {
+            position: absolute;
+            width: 35%;
+            height: 35%;
+            border-radius: 50%;
+            border: 1px solid rgba(8, 145, 178, 0.08);
+        }
+
+        @keyframes radar-spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .radar-status {
+            font-size: 11px;
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        /* 系统负载监视单元 */
+        .system-specs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .spec-item {
+            background: rgba(15, 23, 42, 0.015);
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 1px solid rgba(15, 23, 42, 0.03);
+        }
+
+        .spec-item .spec-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .spec-label {
+            color: var(--text-secondary);
+        }
+
+        .spec-val {
+            color: var(--text-primary);
+        }
+
+        .spec-track {
+            height: 4px;
+            background: rgba(15, 23, 42, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .spec-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 1s;
+        }
+
+        /* 天气 */
+        .weather-widget {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.01);
+            border: 1px solid rgba(15, 23, 42, 0.03);
+            border-radius: 16px;
+            padding: 14px 18px;
+        }
+
+        .weather-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .weather-temp {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .weather-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* 右侧工作空间 */
+        .main-workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            /* ★ 结合父级 stretch 属性，使右侧主版高度与左边完全看齐 */
+            height: 100%; 
+        }
+
+        /* 视图控制器 */
+        .view-panel {
+            display: none;
+        }
+
+        /* 统一大屏自适应撑大 */
+        .view-panel.active {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1; /* ★ 膨胀填满控制台上方全部剩余空间 */
+            animation: viewFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes viewFade {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 汇总主控卡片 */
+        .hub-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+
+        .hub-card {
+            padding: 24px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .hub-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 10%;
+            width: 80%;
+            height: 2px;
+            border-radius: 10px;
+        }
+
+        .hub-card-living::after { background: linear-gradient(90deg, transparent, var(--glow-cyan), transparent); }
+        .hub-card-bedroom::after { background: linear-gradient(90deg, transparent, var(--glow-purple), transparent); }
+        .hub-card-kitchen::after { background: linear-gradient(90deg, transparent, var(--glow-emerald), transparent); }
+
+        .hub-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(15, 23, 42, 0.15);
+            box-shadow: 
+                0 30px 60px rgba(15, 23, 42, 0.06), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .hub-card-kitchen.warning {
+            border-color: var(--glow-amber);
+            box-shadow: 0 10px 40px rgba(245, 158, 11, 0.05);
+        }
+
+        .hub-card-kitchen.danger {
+            border-color: var(--glow-rose);
+            box-shadow: 0 10px 40px rgba(244, 63, 94, 0.08);
+            animation: pulse-danger-panel 1.5s infinite alternate;
+        }
+
+        @keyframes pulse-danger-panel {
+            0% { border-color: rgba(244, 63, 94, 0.3); }
+            100% { border-color: rgba(244, 63, 94, 0.6); }
+        }
+
+        /* 极简包豪斯式汇总参数项 (Luxury slots) */
+        .hub-card-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(15, 23, 42, 0.04);
+        }
+
+        .hub-summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .row-label-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .row-icon {
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+        }
+
+        .row-value {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .row-value span.unit {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-left: 1px;
+            font-weight: 500;
+        }
+
+        /* 深度监控页返回导航 */
+        .detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.03);
+            padding-bottom: 15px;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #f1f5f9;
+            transform: translateX(-2px);
+        }
+
+        .detail-room-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        /* 深度监控卡片 */
+        .detail-card {
+            padding: 24px;
+            position: relative;
+        }
+
+        .detail-card.warning { border-color: var(--glow-amber); }
+        .detail-card.danger { border-color: var(--glow-rose); animation: pulse-danger-panel 1.5s infinite alternate; }
+
+        /* 直线数据条 */
+        .line-gauge-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-bottom: 25px;
+        }
+
+        .line-gauge-item {
+            background: rgba(15, 23, 42, 0.01);
+            border: 1px solid rgba(15, 23, 42, 0.02);
+            border-radius: 12px;
+            padding: 16px 20px;
+        }
+
+        .gauge-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 8px;
+        }
+
+        .gauge-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .gauge-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .gauge-number span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-left: 2px;
+        }
+
+        .gauge-track {
+            height: 4px;
+            background: rgba(15, 23, 42, 0.04);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+
+        /* 状态单元格 */
+        .state-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .state-unit {
+            background: rgba(15, 23, 42, 0.01);
+            border: 1px solid rgba(15, 23, 42, 0.02);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .state-label-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .state-label-icon {
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+        }
+
+        .state-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* 状态徽章 */
+        .status-badge {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-active {
+            background: rgba(37, 99, 235, 0.06);
+            color: var(--color-active);
+            border: 1px solid rgba(37, 99, 235, 0.12);
+        }
+
+        .badge-standby {
+            background: rgba(15, 23, 42, 0.04);
+            color: #64748b;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .badge-safe {
+            background: rgba(16, 185, 129, 0.06);
+            color: var(--color-safe);
+            border: 1px solid rgba(16, 185, 129, 0.12);
+        }
+
+        .badge-warn {
+            background: rgba(217, 119, 6, 0.06);
+            color: var(--color-warn);
+            border: 1px solid rgba(217, 119, 6, 0.12);
+        }
+
+        .badge-danger {
+            background: rgba(225, 29, 72, 0.06);
+            color: var(--color-danger);
+            border: 1px solid rgba(225, 29, 72, 0.12);
+            animation: badgePulse 1s infinite alternate;
+        }
+
+        @keyframes badgePulse {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        /* 旋转风扇桨叶 */
+        .fan-svg {
+            color: #64748b;
+            transition: color 0.3s;
+        }
+
+        .fan-svg.spinning {
+            color: var(--color-active);
+            animation: spin 1.2s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 极客深色控制台 - 下拉完全铺满加固版 */
+        .terminal-panel {
+            background: #090d16; /* 深黑 Obsidian，质感更深邃、高级 */
+            border: 1px solid rgba(15, 23, 42, 0.15);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.12);
+            padding: 24px;
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 防止子元素任何溢出 */
+            border-radius: 24px;
+        }
+
+        @media (min-width: 1024px) {
+            .terminal-panel {
+                flex-grow: 1; /* ★ 强力拉伸控制台填充右侧剩余的全部垂直高度，达到完美“下拉铺满” */
+            }
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 10px;
+        }
+
+        .terminal-title {
+            font-size: 11px;
+            color: #38bdf8; 
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-stream {
+            font-family: "Fira Code", Monaco, "Consolas", monospace; 
+            color: #34d399; 
+            line-height: 1.8;
+            text-align: left;
+            overflow-y: auto; /* ★ 允许容器内自主平滑滚动 */
+        }
+
+        /* 美化控制台的自带滚动条，使其极其纤细高贵 */
+        .terminal-stream::-webkit-scrollbar {
+            width: 4px;
+        }
+        .terminal-stream::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        @media (min-width: 1024px) {
+            .terminal-stream {
+                flex-grow: 1; /* ★ 允许滚动流随外卡一起纵向拉伸 */
+                height: 0;    /* ★ 必须设置为0，使 flex-grow 计算出的实际分配空间完全生效，解决溢出 */
+            }
+        }
+        
+        @media (max-width: 1023px) {
+            .terminal-stream {
+                height: 140px; /* 移动端保底固定高度 */
+            }
+        }
+
+        .terminal-row {
+            margin-bottom: 5px;
+            opacity: 0.9;
+            animation: textFadeIn 0.3s ease-out;
+            font-size: 11px;
+            letter-spacing: 0.2px;
+        }
+
+        @keyframes textFadeIn {
+            from { opacity: 0; transform: translateX(-5px); }
+            to { opacity: 0.9; transform: translateX(0); }
+        }
+
+        .terminal-time {
+            color: #475569;
+            margin-right: 8px;
+        }
+
+        /* 详情页专属历史审计账本样式 (置于二级详情页中) */
+        .detail-ledger-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-top: 24px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+            padding-bottom: 8px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-ledger-box {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 140px;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        .ledger-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            background: rgba(15, 23, 42, 0.015);
+            border: 1px solid rgba(15, 23, 42, 0.02);
+            border-radius: 8px;
+            font-size: 11px;
+            animation: textFadeIn 0.3s ease-out;
+        }
+
+        .diagnostic-card {
+            background: rgba(225, 29, 72, 0.05);
+            border: 1px solid rgba(225, 29, 72, 0.15);
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 13px;
+            color: #b91c1c;
+            line-height: 1.6;
+            margin-top: 20px;
+            text-align: left;
+            display: none;
+            max-width: 100%;
+        }
+
+        .diagnostic-card strong {
+            color: #b91c1c;
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .diagnostic-card ol {
+            padding-left: 18px;
+            margin-top: 5px;
+        }
+
+        /* UI polish layer: calmer dashboard density, clearer cards, stronger responsive behavior */
+        :root {
+            --bg-color: #f6f8fb;
+            --panel-bg: rgba(255, 255, 255, 0.88);
+            --panel-border: rgba(15, 23, 42, 0.08);
+            --shadow-soft: 0 14px 34px rgba(15, 23, 42, 0.07);
+            --shadow-hover: 0 18px 44px rgba(15, 23, 42, 0.1);
+            --radius-panel: 18px;
+            --radius-control: 10px;
+        }
+
+        body {
+            align-items: flex-start;
+            background-image: none;
+            padding: 20px;
+        }
+
+        .glass-panel,
+        .aside-board,
+        .hub-card,
+        .detail-card {
+            background: var(--panel-bg);
+            border-color: var(--panel-border);
+            border-radius: var(--radius-panel);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .login-box {
+            margin: auto;
+            border-radius: 22px;
+            padding: 44px 36px;
+        }
+
+        .login-brand {
+            width: 68px;
+            height: 68px;
+            margin-bottom: 22px;
+        }
+
+        .brand-glow-bg {
+            opacity: 0.65;
+        }
+
+        .input-wrapper input,
+        .btn {
+            border-radius: var(--radius-control);
+        }
+
+        .dashboard {
+            max-width: 1480px;
+            margin: 0 auto;
+        }
+
+        .top-bar {
+            position: sticky;
+            top: 14px;
+            z-index: 20;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            gap: 18px;
+        }
+
+        .brand-section,
+        .user-info {
+            min-width: 0;
+        }
+
+        .brand-section {
+            gap: 12px;
+        }
+
+        .brand-icon {
+            font-size: 28px;
+            flex: 0 0 auto;
+        }
+
+        .top-bar h1 {
+            line-height: 1.2;
+            letter-spacing: 0;
+        }
+
+        .status-pill {
+            flex-wrap: wrap;
+            width: fit-content;
+            max-width: 100%;
+            margin-top: 6px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .user-name {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .logout-btn,
+        .back-btn,
+        .status-badge {
+            border-radius: var(--radius-control);
+        }
+
+        .workspace-grid,
+        .main-workspace,
+        .hub-grid {
+            gap: 18px;
+        }
+
+        @media (min-width: 1024px) {
+            .workspace-grid {
+                grid-template-columns: 300px minmax(0, 1fr);
+            }
+
+            .aside-board {
+                position: sticky;
+                top: 102px;
+                align-self: start;
+            }
+        }
+
+        .aside-board {
+            padding: 20px;
+        }
+
+        .clock-time {
+            font-size: 34px;
+            letter-spacing: 0;
+        }
+
+        .radar-widget,
+        .weather-widget,
+        .spec-item,
+        .line-gauge-item,
+        .state-unit {
+            background: rgba(248, 250, 252, 0.72);
+            border-color: rgba(15, 23, 42, 0.06);
+            border-radius: 12px;
+        }
+
+        .hub-grid {
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        }
+
+        .hub-card {
+            padding: 20px;
+            overflow: hidden;
+            min-height: 168px;
+        }
+
+        .hub-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .hub-card::after {
+            left: 18px;
+            width: calc(100% - 36px);
+            opacity: 0.85;
+        }
+
+        .hub-summary-row,
+        .state-unit,
+        .gauge-meta,
+        .detail-header,
+        .terminal-header {
+            gap: 12px;
+        }
+
+        .row-label-wrap,
+        .state-label-wrap,
+        .terminal-title {
+            min-width: 0;
+        }
+
+        .row-label-wrap span:last-child,
+        .state-label {
+            overflow-wrap: anywhere;
+        }
+
+        .row-value,
+        .status-badge {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .detail-header {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+        }
+
+        .detail-card {
+            padding: 20px;
+        }
+
+        .line-gauge-container {
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+        }
+
+        .state-grid {
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 10px;
+        }
+
+        .terminal-panel {
+            margin-top: 0;
+            border-radius: var(--radius-panel);
+            box-shadow: 0 16px 40px rgba(2, 6, 23, 0.18);
+        }
+
+        .terminal-stream {
+            font-size: 12px;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 12px;
+            }
+
+            .login-box {
+                padding: 34px 22px;
+                border-radius: 18px;
+            }
+
+            .top-bar {
+                position: static;
+                align-items: stretch;
+                flex-direction: column;
+                padding: 14px;
+            }
+
+            .top-bar h1 {
+                font-size: 18px;
+            }
+
+            .user-info {
+                justify-content: space-between;
+            }
+
+            .workspace-grid,
+            .main-workspace,
+            .hub-grid {
+                gap: 14px;
+            }
+
+            .aside-board,
+            .hub-card,
+            .detail-card,
+            .terminal-panel {
+                padding: 16px;
+                border-radius: 16px;
+            }
+
+            .hub-grid,
+            .line-gauge-container,
+            .state-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hub-card {
+                min-height: auto;
+            }
+
+            .detail-header,
+            .state-unit,
+            .hub-summary-row {
+                align-items: flex-start;
+            }
+
+            .detail-header {
+                flex-direction: column;
+            }
+
+            .state-unit {
+                flex-direction: column;
+            }
+
+            .row-value,
+            .status-badge {
+                white-space: normal;
+                text-align: left;
+            }
+
+            .terminal-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+
+        /* 2026 visual refresh: spatial console theme and refined authentication screen */
+        :root {
+            --bg-color: #eef3f1;
+            --panel-bg: rgba(255, 255, 255, 0.84);
+            --panel-border: rgba(22, 78, 99, 0.12);
+            --text-primary: #102026;
+            --text-secondary: #64747b;
+            --color-active: #0f766e;
+            --color-safe: #12805c;
+            --color-warn: #c47a16;
+            --color-danger: #d12d45;
+            --glow-cyan: #0891b2;
+            --glow-purple: #6d5bd0;
+            --glow-emerald: #11956d;
+            --glow-amber: #d38b1d;
+            --glow-rose: #dd3d5c;
+            --shadow-soft: 0 18px 45px rgba(16, 32, 38, 0.1);
+            --shadow-hover: 0 22px 54px rgba(16, 32, 38, 0.14);
+            --radius-panel: 18px;
+            --radius-control: 12px;
+        }
+
+        html {
+            min-height: 100%;
+        }
+
+        body {
+            position: relative;
+            isolation: isolate;
+            min-height: 100vh;
+            align-items: center;
+            background:
+                linear-gradient(135deg, rgba(8, 145, 178, 0.14), transparent 34%),
+                linear-gradient(225deg, rgba(17, 149, 109, 0.12), transparent 38%),
+                linear-gradient(180deg, #f7fbfa 0%, #e8efee 100%);
+            letter-spacing: 0;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(16, 32, 38, 0.045) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(16, 32, 38, 0.045) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent 82%);
+        }
+
+        .glass-panel,
+        .aside-board,
+        .hub-card,
+        .detail-card {
+            backdrop-filter: blur(24px) saturate(125%);
+            -webkit-backdrop-filter: blur(24px) saturate(125%);
+        }
+
+        .login-box {
+            width: min(100%, 920px);
+            max-width: 920px;
+            min-height: 560px;
+            display: grid;
+            grid-template-columns: minmax(0, 0.95fr) minmax(340px, 1.05fr);
+            gap: 0;
+            padding: 0;
+            overflow: hidden;
+            text-align: left;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.82);
+            box-shadow: 0 28px 80px rgba(16, 32, 38, 0.14);
+        }
+
+        .login-identity {
+            position: relative;
+            min-height: 100%;
+            padding: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: #f8fffd;
+            background:
+                linear-gradient(150deg, rgba(15, 118, 110, 0.95) 0%, rgba(8, 88, 112, 0.94) 52%, rgba(23, 37, 84, 0.94) 100%),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+        }
+
+        .login-identity::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+                linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+            background-size: 34px 34px;
+            opacity: 0.22;
+        }
+
+        .login-brand {
+            width: 66px;
+            height: 66px;
+            margin: 0 0 28px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: #ffffff;
+            box-shadow: none;
+        }
+
+        .brand-avatar {
+            display: inline-flex;
+            color: currentColor;
+            line-height: 0;
+            filter: none;
+        }
+
+        .brand-glow-bg {
+            display: none;
+        }
+
+        .login-kicker {
+            position: relative;
+            z-index: 1;
+            width: fit-content;
+            margin-bottom: 16px;
+            padding: 7px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            color: rgba(248, 255, 253, 0.78);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1.4px;
+        }
+
+        .login-title {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 10px;
+            color: #ffffff;
+            background: none;
+            -webkit-text-fill-color: currentColor;
+            font-size: 34px;
+            line-height: 1.15;
+            letter-spacing: 0;
+        }
+
+        .login-subtitle {
+            position: relative;
+            z-index: 1;
+            max-width: 320px;
+            margin-bottom: 0;
+            color: rgba(248, 255, 253, 0.72);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .login-signal {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 42px;
+        }
+
+        .login-signal div {
+            min-width: 0;
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .login-signal span {
+            display: block;
+            margin-bottom: 6px;
+            color: rgba(248, 255, 253, 0.56);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .login-signal strong {
+            display: block;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 850;
+            overflow-wrap: anywhere;
+        }
+
+        .login-form-panel {
+            padding: 54px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            color: #4f6168;
+            letter-spacing: 0.8px;
+        }
+
+        .input-wrapper input {
+            height: 52px;
+            padding: 0 50px 0 48px;
+            background: rgba(248, 250, 252, 0.9);
+            border-color: rgba(16, 32, 38, 0.1);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+        }
+
+        .input-wrapper input:focus {
+            border-color: rgba(15, 118, 110, 0.7);
+            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
+        }
+
+        .input-wrapper:focus-within .input-icon {
+            color: var(--color-active);
+            filter: none;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .password-toggle:hover {
+            background: rgba(15, 118, 110, 0.08);
+            color: var(--color-active);
+        }
+
+        .btn {
+            height: 52px;
+            padding: 0 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0f766e 0%, #0e7490 100%);
+            box-shadow: 0 14px 28px rgba(14, 116, 144, 0.22);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 34px rgba(14, 116, 144, 0.28);
+        }
+
+        .btn-secondary {
+            background: rgba(15, 118, 110, 0.08);
+            color: #0f766e;
+            border-color: rgba(15, 118, 110, 0.18);
+        }
+
+        .switch-tab {
+            align-self: center;
+            margin-top: 22px;
+            color: #0f766e;
+        }
+
+        .switch-tab::after {
+            background-color: #0f766e;
+        }
+
+        .top-bar {
+            background: rgba(255, 255, 255, 0.78);
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(8, 145, 178, 0.1));
+            font-size: 22px;
+            filter: none;
+        }
+
+        @media (max-width: 860px) {
+            body {
+                align-items: flex-start;
+                padding: 14px;
+            }
+
+            .login-box {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+
+            .login-identity {
+                min-height: 300px;
+                padding: 30px;
+            }
+
+            .login-form-panel {
+                padding: 34px 28px;
+            }
+
+            .login-title {
+                font-size: 28px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .login-identity,
+            .login-form-panel {
+                padding: 24px 20px;
+            }
+
+            .login-signal {
+                grid-template-columns: 1fr;
+                margin-top: 28px;
+            }
+
+            .input-wrapper input {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 登录页面 -->
+    <div class="login-box glass-panel" id="loginPage">
+        <section class="login-identity">
+            <div>
+                <div class="login-brand">
+                    <div class="brand-glow-bg"></div>
+                    <span class="brand-avatar" aria-hidden="true">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 11.5 12 4l9 7.5"></path>
+                            <path d="M5.5 10.5V20h13v-9.5"></path>
+                            <path d="M9.5 20v-5h5v5"></path>
+                            <path d="M8 9.5h8"></path>
+                        </svg>
+                    </span>
+                </div>
+                <div class="login-kicker">SMART SPACE CONSOLE</div>
+                <div class="login-title" id="pageTitle">Master 智能空间系统</div>
+                <div class="login-subtitle" id="loginSubtitle">验证管理员安全凭据，进入全屋环境与安防中控台</div>
+            </div>
+
+            <div class="login-signal" aria-hidden="true">
+                <div>
+                    <span>LINK</span>
+                    <strong>OneNET</strong>
+                </div>
+                <div>
+                    <span>MODE</span>
+                    <strong>Secure</strong>
+                </div>
+                <div>
+                    <span>SYNC</span>
+                    <strong>Live</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="login-form-panel">
+            <div class="input-group">
+                <label>安全管理员账号</label>
+                <div class="input-wrapper">
+                    <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <input type="text" id="username" placeholder="请输入管理员用户名" autocomplete="username">
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label>安全通行密码</label>
+                <div class="input-wrapper">
+                    <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <input type="password" id="password" placeholder="请输入管理员密码" autocomplete="current-password">
+                    <button class="password-toggle" type="button" onclick="togglePassword()" aria-label="显示或隐藏密码">
+                        <svg id="passwordEyeIcon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">
+                <span>开启监控大屏</span>
+            </button>
+            <button class="btn btn-secondary" id="registerBtn" style="display:none" onclick="handleRegister()">
+                <span>注册安全管理员</span>
+            </button>
+            
+            <div class="switch-tab" id="switchTab" onclick="switchMode()">没有账号？点击注册</div>
+        </section>
+    </div>
+
+    <!-- 监控大屏 -->
+    <div class="dashboard" id="dashboard">
+        <!-- 顶栏 -->
+        <div class="top-bar glass-panel">
+            <div class="brand-section">
+                <span class="brand-icon">🛸</span>
+                <div>
+                    <h1>未来空间 Master 控制大屏</h1>
+                    <div class="status-pill">
+                        <span class="status-dot" id="connStatusDot"></span>
+                        <span id="connStatusText">令牌计算中...</span>
+                        <span style="margin-left: 5px;" id="lastUpdateTime">--:--:--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="user-info">
+                <span class="user-name" id="welcomeUser">欢迎，管理员</span>
+                <button class="logout-btn" onclick="logout()">断开连接</button>
+            </div>
+        </div>
+
+        <!-- 诊断区 -->
+        <div class="diagnostic-card" id="corsDiagnose">
+            <strong>⚠️ 跨域限制与公共代理连接受阻说明</strong>
+            由于您是在本地双击运行网页（file://协议），且公共跨域代理（如 corsproxy.io）可能暂时被限流，导致数据无法呈现。建议：
+            <ol>
+                <li>在 Edge / Chrome 浏览器扩展商店搜索并安装 <strong>“Allow CORS: Access-Control-Allow-Origin”</strong> 插件并开启。</li>
+                <li><strong>开启插件后刷新网页：</strong>系统将自动切换为<strong>极速直连模式</strong>，直接读取 OneNET 数据！</li>
+            </ol>
+        </div>
+
+        <!-- 双栏工作空间 -->
+        <div class="workspace-grid">
+            
+            <!-- 左侧：智枢信息面板 -->
+            <aside class="aside-board">
+                <div class="clock-widget">
+                    <div class="clock-time" id="liveClock">00:00:00</div>
+                    <div class="clock-date" id="liveDate">--年--月--日 星期--</div>
+                </div>
+
+                <div class="radar-widget">
+                    <div class="radar-title">SECURITY RADAR / 安防扫描</div>
+                    <div class="radar-container">
+                        <div class="radar-sweep"></div>
+                        <div class="radar-grid-mid"></div>
+                        <div class="radar-grid-inner"></div>
+                    </div>
+                    <div class="radar-status" style="font-size: 11px; font-weight: 600; color: var(--color-safe);">🟢 房屋边界正常</div>
+                </div>
+
+                <!-- 动态联网天气看板 -->
+                <div class="weather-widget">
+                    <div class="weather-info">
+                        <span class="weather-temp" id="weatherTemp">--°C</span>
+                        <span class="weather-desc" id="weatherDesc">同步定位中...</span>
+                    </div>
+                    <div style="font-size: 20px;" id="weatherIcon">☀️</div>
+                </div>
+
+                <div class="gateway-info">
+                    <div class="gateway-title">OneNET 连接凭据</div>
+                    <div class="gateway-row"><span class="gateway-label">PRODUCT ID</span><span class="gateway-val" id="specProdId">--</span></div>
+                    <div class="gateway-row"><span class="gateway-label">DEVICE NAME</span><span class="gateway-val" id="specDevName">--</span></div>
+                    <div class="gateway-row"><span class="gateway-label">AUTH METHOD</span><span class="gateway-val">HMAC-SHA1</span></div>
+                </div>
+            </aside>
+
+            <!-- 右侧：多级深度监视舱 -->
+            <div class="main-workspace">
+                
+                <!-- 【主控总览级页面】 -->
+                <div id="viewHub" class="view-panel active">
+                    <div class="hub-grid" id="hubCardsContainer">
+                        <!-- 动态渲染客厅/卧室/厨房 汇总卡片 -->
+                    </div>
+                </div>
+
+                <!-- 【客厅详情】 -->
+                <div id="viewLiving" class="view-panel">
+                    <div class="detail-header">
+                        <button class="back-btn" onclick="switchView('viewHub')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            <span>返回主控总览</span>
+                        </button>
+                        <span class="detail-room-name">客厅数据监视舱</span>
+                    </div>
+                    <div id="livingDetailCard" class="card glass-panel detail-card card-living">
+                        <!-- 动态渲染客厅高阶详情 -->
+                    </div>
+                </div>
+
+                <!-- 【卧室详情】 -->
+                <div id="viewBedroom" class="view-panel">
+                    <div class="detail-header">
+                        <button class="back-btn" onclick="switchView('viewHub')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            <span>返回主控总览</span>
+                        </button>
+                        <span class="detail-room-name">卧室数据监视舱</span>
+                    </div>
+                    <div id="bedroomDetailCard" class="card glass-panel detail-card card-bedroom">
+                        <!-- 动态渲染卧室高阶详情 -->
+                    </div>
+                </div>
+
+                <!-- 【厨房详情】 -->
+                <div id="viewKitchen" class="view-panel">
+                    <div class="detail-header">
+                        <button class="back-btn" onclick="switchView('viewHub')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            <span>返回主控总览</span>
+                        </button>
+                        <span class="detail-room-name">厨房数据监视舱</span>
+                    </div>
+                    <div id="kitchenDetailCard" class="card glass-panel detail-card card-kitchen">
+                        <!-- 动态渲染厨房高阶详情 -->
+                    </div>
+                </div>
+
+                <!-- 系统心跳日志终端（自适应拉伸铺满版） -->
+                <div class="terminal-panel">
+                    <div class="terminal-header">
+                        <div class="terminal-title">
+                            <span style="display:inline-block; width:5px; height:5px; background:currentColor; border-radius:50%; animation: pulse-dot 1s infinite;"></span>
+                            <span>System Live Signal Console / 系统心跳控制台</span>
+                        </div>
+                        <div style="font-size: 10px; color: #475569;">BPS: 115200</div>
+                    </div>
+                    <!-- ★ 绑定高度为0且自动弹性生长的终端流 -->
+                    <div class="terminal-stream" id="terminalStream">
+                        <div class="terminal-row"><span class="terminal-time">[SYS INIT]</span> 控制总线就绪，等待同步...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ======================
+        // 核心配置 (完全对接您的OneNET账号)
+        // ======================
+        let currentUser = null;
+        let lastAlarm = 0;
+        let timer = null;
+        let weatherTimer = null;
+        let isLoginMode = true;
+        let isFirstLoad = true;
+        let computedToken = ''; 
+
+        const CONFIG = {
+            product_id: "WzNUI4OLbx",
+            device_name: "d1test",
+            author_key: "MvfOM11Ngs0bIVD0yEDgRfAlpcQVgiusfQE8PAKiYS1sm3QfIBmC9whqCsFhBqsY",
+            version: "2022-05-01",
+            user_id: "438939"
+        };
+
+        const PROXIES = [
+            "https://corsproxy.io/?",                 
+            "https://thingproxy.freeboard.io/fetch/", 
+            ""                                        
+        ];
+        let currentProxyIndex = 0;
+        let proxyRetryCount = 0;
+
+        // 真实的物理设备数据
+        let deviceData = {
+            temp: "--", humi: "--", dev1_door_state: 0, dev1_blue_state: false,
+            dev2_ldr_adc: 0, dev2_led_state: false, dev2_force_open: 0,
+            mq2_percent: "--", mq135_percent: "--", alarm_level: 0,
+            dev3_led_state: false, dev3_fan_state: false
+        };
+
+        // 空间历史审计数据（专用于详情页历史账本，大门与厨房报警）
+        let lastKnownDoorState = null;
+        let lastKnownAlarmLevel = null;
+        let doorHistory = []; 
+        let alarmHistory = [];
+
+        // ======================
+        // 带有 6秒硬超时 的 fetch 请求包装器
+        // ======================
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 6000 } = options; 
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            
+            try {
+                const response = await fetch(resource, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        }
+
+        // ======================
+        // 联网拉取地理定位与真实天气 (API-Key Free 异步高阶接口)
+        // ======================
+        async function fetchLiveWeather() {
+            try {
+                let ipRes = await fetch("https://ipapi.co/json/");
+                let ipData = await ipRes.json();
+                const lat = ipData.latitude || 1.35;
+                const lon = ipData.longitude || 103.82;
+                const city = ipData.city || "本地";
+
+                let weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`);
+                let weatherData = await weatherRes.json();
+                
+                const temp = weatherData.current.temperature_2m;
+                const code = weatherData.current.weather_code;
+
+                let desc = "晴朗";
+                let icon = "☀️";
+                if (code >= 1 && code <= 3) { desc = "多云"; icon = "☁️"; }
+                else if (code >= 45 && code <= 48) { desc = "有雾"; icon = "🌫️"; }
+                else if (code >= 51 && code <= 67) { desc = "小雨"; icon = "🌧️"; }
+                else if (code >= 71 && code <= 86) { desc = "降雪"; icon = "❄️"; }
+                else if (code >= 95) { desc = "雷暴"; icon = "⛈️"; }
+
+                document.getElementById("weatherTemp").innerText = `${temp}°C`;
+                document.getElementById("weatherDesc").innerText = `${city}：${desc}`;
+                document.getElementById("weatherIcon").innerText = icon;
+                appendLog("SYS", `本地气象刷新完成。节点城市: [${city}] | 当前为 ${desc} ${temp}°C`);
+            } catch (err) {
+                console.log("获取天气失败", err);
+                document.getElementById("weatherTemp").innerText = "24°C";
+                document.getElementById("weatherDesc").innerText = "室外环境：自动气象站";
+                document.getElementById("weatherIcon").innerText = "☀️";
+            }
+        }
+
+        // ======================
+        // 极简时钟与凭证载入
+        // ======================
+        function runLiveWidgets() {
+            setInterval(() => {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                const ss = String(now.getSeconds()).padStart(2, '0');
+                
+                const clockEl = document.getElementById("liveClock");
+                if (clockEl) {
+                    clockEl.innerText = `${hh}:${mm}:${ss}`;
+                }
+            }, 1000);
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const weekDays = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+            const week = weekDays[now.getDay()];
+            const dateEl = document.getElementById("liveDate");
+            if (dateEl) {
+                dateEl.innerText = `${year}年${month}月${day}日 ${week}`;
+            }
+
+            document.getElementById("specProdId").innerText = CONFIG.product_id;
+            document.getElementById("specDevName").innerText = CONFIG.device_name;
+        }
+
+        // ======================
+        // 系统日志控制台打印与自滚动 (终端自适应加固版)
+        // ======================
+        function appendLog(tag, content) {
+            const stream = document.getElementById("terminalStream");
+            if (!stream) return;
+
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+            
+            const row = document.createElement("div");
+            row.className = "terminal-row";
+            row.innerHTML = `<span class="terminal-time">[${timeStr}] [${tag}]</span> ${content}`;
+            
+            stream.appendChild(row);
+            
+            // ★ 自适应滚动高精密锁定，彻底防止溢出泄出
+            stream.scrollTop = stream.scrollHeight;
+
+            if (stream.children.length > 80) {
+                stream.removeChild(stream.firstChild);
+            }
+        }
+
+        // ======================
+        // 空间运行历史自归档与总线打印 (彻底修复 String 模板语法转义 Bug)
+        // ======================
+        function recordSpaceEvent(type, value, message) {
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            
+            let badgeClass = 'badge-standby';
+            let formattedMsg = '';
+
+            if (type === 'door') {
+                badgeClass = value === 1 ? 'badge-danger' : 'badge-safe';
+                formattedMsg = value === 1 ? '🔓 大门开启' : '🔒 大门闭锁';
+                
+                doorHistory.unshift({ time: timeStr, badgeClass, message: formattedMsg, ctx: message });
+                if (doorHistory.length > 20) doorHistory.pop();
+                
+                // ★ 修正 String 拼接：使用标准加号拼接，彻底解决任何 AI 编译器带来的反斜杠转义 Bug！
+                appendLog("DOOR", "大门安全状态变更：" + formattedMsg + " (" + message + ")");
+            } else if (type === 'gas') {
+                if (value === 1) {
+                    badgeClass = 'badge-warn';
+                    formattedMsg = '🟡 浓度积聚预警';
+                } else if (value === 2) {
+                    badgeClass = 'badge-danger';
+                    formattedMsg = '🚨 燃气泄漏警报';
+                }
+                
+                alarmHistory.unshift({ time: timeStr, badgeClass, message: formattedMsg, ctx: message });
+                if (alarmHistory.length > 20) alarmHistory.pop();
+                
+                // ★ 自动实时同步推送到下方黑底大控制台中！
+                appendLog("ALARM", "厨房安防系数异动：" + formattedMsg + " (" + message + ")");
+            }
+            
+            renderLedger(); // 同步渲染二级页面专属历史账本
+        }
+
+        // 渲染详情页内置历史记录账本
+        function renderLedger() {
+            const doorListEl = document.getElementById("doorDetailLedger");
+            const alarmListEl = document.getElementById("gasDetailLedger");
+
+            if (doorListEl) {
+                if (doorHistory.length === 0) {
+                    doorListEl.innerHTML = '<div style="color:var(--text-secondary); padding-top:10px;">暂无历史大门开关记录</div>';
+                } else {
+                    doorListEl.innerHTML = doorHistory.map(item => `
+                        <div class="ledger-item">
+                            <span style="font-weight:700; color:var(--text-primary); font-family: monospace;">${item.time}</span>
+                            <span class="status-badge ${item.badgeClass}">${item.message}</span>
+                            <span style="color: var(--text-secondary); font-size:10px;">${item.ctx}</span>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            if (alarmListEl) {
+                if (alarmHistory.length === 0) {
+                    alarmListEl.innerHTML = '<div style="color:var(--text-secondary); padding-top:10px;">暂无历史气体异常警报记录</div>';
+                } else {
+                    alarmListEl.innerHTML = alarmHistory.map(item => `
+                        <div class="ledger-item">
+                            <span style="font-weight:700; color:var(--text-primary); font-family: monospace;">${item.time}</span>
+                            <span class="status-badge ${item.badgeClass}">${item.message}</span>
+                            <span style="color: var(--text-secondary); font-size:10px;">${item.ctx}</span>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+
+        // ======================
+        // 本地计算 Token 核心算法
+        // ======================
+        function createCommonToken(params) {
+            const version = params.version || '2022-05-01';
+            const resValue = 'userid/' + params.user_id;
+            const et = Math.ceil((Date.now() + 365 * 24 * 3600 * 1000) / 1000);
+            const method = 'sha1';
+
+            try {
+                const key = CryptoJS.enc.Base64.parse(params.author_key);
+                const stringForSignature = et + "\n" + method + "\n" + resValue + "\n" + version;
+                const hmac = CryptoJS.HmacSHA1(stringForSignature, key);
+                const sign = CryptoJS.enc.Base64.stringify(hmac);
+                const encodedRes = encodeURIComponent(resValue);
+                const encodedSign = encodeURIComponent(sign);
+
+                appendLog("KEYGEN", `鉴权凭证建立成功。`);
+                return `version=${version}&res=${encodedRes}&et=${et}&method=${method}&sign=${encodedSign}`;
+            } catch (err) {
+                appendLog("ERROR", `密钥计算失败：${err.message || err}`);
+                return '';
+            }
+        }
+
+        // ======================
+        // 登录/注册/嵌套视图控制
+        // ======================
+        function hashPassword(password) {
+            return CryptoJS.SHA256(password).toString();
+        }
+
+        function switchMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById("pageTitle").innerText = isLoginMode ? "Master 智能空间系统" : "注册安全管理员";
+            document.getElementById("loginSubtitle").innerText = isLoginMode ? "验证管理员安全凭据，进入全屋环境与安防中控台" : "创建本地管理员凭据，完成后返回登录入口";
+            document.getElementById("loginBtn").style.display = isLoginMode ? "inline-flex" : "none";
+            document.getElementById("registerBtn").style.display = isLoginMode ? "none" : "inline-flex";
+            document.getElementById("switchTab").innerText = isLoginMode ? "没有账号？点击注册" : "已有账号？点击登录";
+        }
+
+        function togglePassword() {
+            const passwordInput = document.getElementById("password");
+            const eyeIcon = document.getElementById("passwordEyeIcon");
+            const isHidden = passwordInput.type === "password";
+            passwordInput.type = isHidden ? "text" : "password";
+            eyeIcon.innerHTML = isHidden
+                ? '<path d="M17.94 17.94A10.9 10.9 0 0 1 12 19c-6.5 0-10-7-10-7a18.7 18.7 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.1"></path><path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"></path><path d="M3 3l18 18"></path>'
+                : '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle>';
+        }
+
+        function getUsers() {
+            return JSON.parse(localStorage.getItem("smartHomeUsers") || "{}");
+        }
+
+        function handleLogin() {
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value;
+
+            if (!username || !password) {
+                alert("请输入用户名和密码！");
+                return;
+            }
+
+            const users = getUsers();
+            const user = users[username];
+            const passwordHash = hashPassword(password);
+            if (user && (user.password === password || user.passwordHash === passwordHash)) {
+                currentUser = username;
+                localStorage.setItem("currentUser", username);
+                enterDashboard();
+            } else {
+                alert("用户名或密码错误！");
+            }
+        }
+
+        function handleRegister() {
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value;
+
+            if (!username || !password) {
+                alert("请输入用户名和密码！");
+                return;
+            }
+
+            const users = getUsers();
+            if (users[username]) {
+                alert("该用户名已被注册！");
+                return;
+            }
+
+            users[username] = { passwordHash: hashPassword(password), createTime: new Date().toLocaleString() };
+            localStorage.setItem("smartHomeUsers", JSON.stringify(users));
+            alert("注册成功！请登录");
+            switchMode();
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem("currentUser");
+            if (timer) clearInterval(timer);
+            if (weatherTimer) clearInterval(weatherTimer);
+            document.getElementById("loginPage").style.display = "grid";
+            document.getElementById("dashboard").classList.remove("show");
+            document.getElementById("corsDiagnose").style.display = "none";
+            document.getElementById("username").value = "";
+            document.getElementById("password").value = "";
+            isFirstLoad = true;
+            proxyRetryCount = 0;
+            currentProxyIndex = 0;
+            computedToken = '';
+            lastKnownDoorState = null;
+            lastKnownAlarmLevel = null;
+            doorHistory = [];
+            alarmHistory = [];
+            switchView('viewHub');
+        }
+
+        function enterDashboard() {
+            document.getElementById("loginPage").style.display = "none";
+            document.getElementById("dashboard").classList.add("show");
+            document.getElementById("welcomeUser").innerText = "管理员，" + currentUser;
+            
+            appendLog("SYS", "系统总线运行，连接 OneNET 数据链。");
+            
+            if (timer) clearInterval(timer);
+            if (weatherTimer) clearInterval(weatherTimer);
+            fetchLiveWeather();
+            weatherTimer = setInterval(fetchLiveWeather, 600000);
+
+            computedToken = createCommonToken({
+                author_key: CONFIG.author_key,
+                version: CONFIG.version,
+                user_id: CONFIG.user_id
+            });
+            
+            updateConnectionStatus('connecting', '同步中...');
+            fetchData();
+            timer = setInterval(fetchData, 3000);
+        }
+
+        function updateConnectionStatus(status, text) {
+            const dot = document.getElementById('connStatusDot');
+            const statusTxt = document.getElementById('connStatusText');
+            
+            if (!dot || !statusTxt) return;
+            
+            dot.className = 'status-dot';
+            if (status === 'online') {
+                dot.classList.add('online');
+                statusTxt.innerText = text || '连接正常';
+            } else if (status === 'connecting') {
+                dot.classList.add('connecting');
+                statusTxt.innerText = text || '通道建立中...';
+            } else {
+                dot.classList.add('offline');
+                statusTxt.innerText = text || '阻断连接';
+            }
+        }
+
+        function switchView(viewId) {
+            const views = ['viewHub', 'viewLiving', 'viewBedroom', 'viewKitchen'];
+            views.forEach(v => {
+                document.getElementById(v).classList.remove('active');
+            });
+            document.getElementById(viewId).classList.add('active');
+            
+            const roomNames = {
+                'viewHub': '主控总览面板',
+                'viewLiving': '客厅详情监视舱',
+                'viewBedroom': '卧室详情监视舱',
+                'viewKitchen': '厨房详情监视舱'
+            };
+            appendLog("GUI", `大屏导航：切换至 ${roomNames[viewId]}`);
+        }
+
+        // ======================
+        // 数据拉取同步
+        // ======================
+        async function fetchData() {
+            if (!computedToken) {
+                updateConnectionStatus('offline', 'Token 异常');
+                return;
+            }
+
+            const apiUrl = `https://iot-api.heclouds.com/thingmodel/query-device-property?product_id=${CONFIG.product_id}&device_name=${CONFIG.device_name}`;
+            let activeProxy = PROXIES[currentProxyIndex];
+            let requestUrl = activeProxy 
+                ? (activeProxy.includes('?') ? activeProxy + encodeURIComponent(apiUrl) : activeProxy + apiUrl) 
+                : apiUrl;
+            
+            try {
+                let res = await fetchWithTimeout(requestUrl, {
+                    headers: { "authorization": computedToken } 
+                });
+
+                if (!res.ok) throw new Error("代理链路错误");
+                let json = await res.json();
+                
+                if (json.code !== 0 || !json.data) {
+                    throw new Error("OneNET 数据被拒: " + (json.msg || ''));
+                }
+                
+                parseData(json.data);
+                document.getElementById("corsDiagnose").style.display = "none"; 
+                
+                let activeType = activeProxy ? `通道 ${currentProxyIndex + 1}` : "直连通道";
+                updateConnectionStatus('online', `同步完成 (${activeType})`);
+                
+                const now = new Date();
+                document.getElementById('lastUpdateTime').innerText = `同步: ${now.toTimeString().split(' ')[0]}`;
+                isFirstLoad = false;
+                proxyRetryCount = 0; 
+                
+            } catch (e) {
+                const nodeName = activeProxy ? `代理 [${activeProxy}]` : "直连通道";
+                appendLog("WARN", `${nodeName} 同步超时。正在尝试轮换下一个通道...`);
+                proxyRetryCount++;
+                
+                if (proxyRetryCount <= PROXIES.length) {
+                    currentProxyIndex = (currentProxyIndex + 1) % PROXIES.length;
+                    updateConnectionStatus('connecting', `重试中...`);
+                    return fetchData(); 
+                } else {
+                    updateConnectionStatus('offline', '阻断连接');
+                    document.getElementById("corsDiagnose").style.display = "block";
+                    proxyRetryCount = 0; 
+                }
+            }
+        }
+
+        function parseData(list) {
+            list.forEach(item => {
+                const id = item.identifier;
+                const val = item.value;
+                if (id === "temp") deviceData.temp = val;
+                if (id === "humi") deviceData.humi = val;
+                if (id === "dev1_door_state") deviceData.dev1_door_state = Number(val);
+                if (id === "dev1_blue_state") deviceData.dev1_blue_state = val === true || val === "true";
+
+                if (id === "dev2_ldr_adc") deviceData.dev2_ldr_adc = Number(val);
+                if (id === "dev2_led_state") deviceData.dev2_led_state = val === true || val === "true";
+                if (id === "dev2_force_open") deviceData.dev2_force_open = Number(val);
+
+                if (id === "mq2_percent") deviceData.mq2_percent = val;
+                if (id === "mq135_percent") deviceData.mq135_percent = val;
+                if (id === "alarm_level") deviceData.alarm_level = Number(val);
+                if (id === "dev3_led_state") deviceData.dev3_led_state = val === true || val === "true";
+                if (id === "dev3_fan_state") deviceData.dev3_fan_state = val === true || val === "true";
+            });
+
+            appendLog("ONENET", "物理帧同步成功。温度: " + deviceData.temp + "℃ | 厨房预警状态码: [" + deviceData.alarm_level + "]");
+
+            // 1. 大门开关动作历史记录核心机制
+            if (lastKnownDoorState === null) {
+                lastKnownDoorState = deviceData.dev1_door_state;
+                recordSpaceEvent('door', deviceData.dev1_door_state, '总线首次数据同步。');
+            } else if (deviceData.dev1_door_state !== lastKnownDoorState) {
+                lastKnownDoorState = deviceData.dev1_door_state;
+                recordSpaceEvent('door', deviceData.dev1_door_state, '物理动作状态发生切换。');
+            }
+
+            // 2. 厨房分级气防报警历史归档核心机制
+            if (lastKnownAlarmLevel === null) {
+                lastKnownAlarmLevel = deviceData.alarm_level;
+                if (deviceData.alarm_level > 0) {
+                    recordSpaceEvent('gas', deviceData.alarm_level, "总线同步异常。当前浓度: " + deviceData.mq2_percent + "%");
+                }
+            } else if (deviceData.alarm_level !== lastKnownAlarmLevel) {
+                lastKnownAlarmLevel = deviceData.alarm_level;
+                if (deviceData.alarm_level > 0) {
+                    recordSpaceEvent('gas', deviceData.alarm_level, "防线紧急拦截！当前浓度: " + deviceData.mq2_percent + "%");
+                } else {
+                    recordSpaceEvent('door', 0, "厨房可燃气体警报已复归。安全闭锁恢复。");
+                }
+            }
+
+            renderUI();
+        }
+
+        function getLightPercent() {
+            let adc = deviceData.dev2_ldr_adc || 0;
+            adc = Math.max(0, Math.min(4095, adc));
+            return ((4095 - adc) / 4095 * 100).toFixed(1);
+        }
+
+        // ======================
+        // 厨房安防三级预警响应
+        // ======================
+        function checkAlarm() {
+            if (deviceData.alarm_level >= 1) {
+                let now = Date.now();
+                if (now - lastAlarm > 8000) {
+                    if (deviceData.alarm_level === 1) {
+                        if (navigator.vibrate) navigator.vibrate([150, 100]);
+                        alert(`🟡 厨房安全预警：气体浓度积聚，排气风扇已联动开启！`);
+                    } else if (deviceData.alarm_level === 2) {
+                        if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100]);
+                        alert(`🔴 厨房紧急泄漏报警！安全闸阀已切断，请立刻通风！`);
+                    }
+                    lastAlarm = now;
+                }
+            }
+        }
+
+        // ======================
+        // 极简奢华 UI 渲染 (已包含控制总线“下拉铺满”算法)
+        // ======================
+        function renderUI() {
+            let light = getLightPercent();
+            let tempVal = parseFloat(deviceData.temp) || 0;
+            let humiVal = parseFloat(deviceData.humi) || 0;
+            let lightVal = parseFloat(light) || 0;
+            let mq2Val = parseFloat(deviceData.mq2_percent) || 0;
+            let mq135Val = parseFloat(deviceData.mq135_percent) || 0;
+
+            // ★ 修复物理直线百分比进度条核心映射计算 (直接采用 0~100 百分比比例值)
+            const tempPercent = Math.min(100, Math.max(0, tempVal * 2.5)); // 假设40度满格，映射到100%
+            const humiPercent = Math.min(100, Math.max(0, humiVal));       // 湿度直接百分比
+            const lightPercent = Math.min(100, Math.max(0, lightVal));     // 光照强度直接百分比
+            const mq2Percent = Math.min(100, Math.max(0, mq2Val));         // 气体百分比
+            const mq135Percent = Math.min(100, Math.max(0, mq135Val));     // 空气质量百分比
+
+            // 1. 渲染主控汇总卡片 (去代码化标题)
+            let hubContainer = document.getElementById("hubCardsContainer");
+            if (hubContainer) {
+                let kitchenAlarmBadge = 'badge-safe';
+                let kitchenAlarmText = '🟢 安全';
+                let kitchenPulseClass = '';
+
+                if (deviceData.alarm_level === 1) {
+                    kitchenAlarmBadge = 'badge-warn';
+                    kitchenAlarmText = '🟡 预警';
+                    kitchenPulseClass = 'warning';
+                } else if (deviceData.alarm_level === 2) {
+                    kitchenAlarmBadge = 'badge-danger';
+                    kitchenAlarmText = '🔴 报警';
+                    kitchenPulseClass = 'danger';
+                }
+
+                hubContainer.innerHTML = `
+                    <!-- 客厅汇总卡 -->
+                    <div class="hub-card hub-card-living" onclick="switchView('viewLiving')">
+                        <div class="card-title">
+                            <div class="card-header-left">
+                                <span class="state-label-icon" style="color: var(--color-active);">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                </span>
+                                <span style="margin-left:8px; font-weight: 800;">客厅</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-summary">
+                            <div class="hub-summary-row">
+                                <div class="row-label-wrap">
+                                    <span class="row-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9a3 3 0 1 0 0 6H12a3 3 0 1 0 0-6H12z"></path><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+                                    </span>
+                                    <span>环境温度</span>
+                                </div>
+                                <span class="row-value">${deviceData.temp}<span class="unit">℃</span></span>
+                            </div>
+                            <div class="hub-summary-row">
+                                <div class="row-label-wrap">
+                                    <span class="row-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    </span>
+                                    <span>门锁安全</span>
+                                </div>
+                                <span class="row-value" style="color: ${deviceData.dev1_door_state === 1 ? 'var(--color-danger)' : 'var(--color-safe)'}">${deviceData.dev1_door_state === 1 ? '🔓 已开启' : '🔒 已闭锁'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 卧室汇总卡 -->
+                    <div class="hub-card hub-card-bedroom" onclick="switchView('viewBedroom')">
+                        <div class="card-title">
+                            <div class="card-header-left">
+                                <span class="state-label-icon" style="color: var(--glow-purple);">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4h20v2H2zM2 20h20v2H2zM20 8v8H4V8H2v10h20V8h-2zM8 10h8v2H8z"></path></svg>
+                                </span>
+                                <span style="margin-left:8px; font-weight: 800;">卧室</span>
+                            </div>
+                        </div>
+                        <div class="hub-card-summary">
+                            <div class="hub-summary-row">
+                                <div class="row-label-wrap">
+                                    <span class="row-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                                    </span>
+                                    <span>光照强度</span>
+                                </div>
+                                <span class="row-value">${light}<span class="unit">%</span></span>
+                            </div>
+                            <div class="hub-summary-row">
+                                <div class="row-label-wrap">
+                                    <span class="row-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line></svg>
+                                    </span>
+                                    <span>卧室蓝灯</span>
+                                </div>
+                                <span class="row-value">${deviceData.dev2_led_state ? '● 已点亮' : '○ 已关闭'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 厨房汇总卡 -->
+                    <div class="hub-card hub-card-kitchen ${kitchenPulseClass}" onclick="switchView('viewKitchen')">
+                        <div class="card-title">
+                            <div class="card-header-left">
+                                <span class="state-label-icon" style="color: ${deviceData.alarm_level > 0 ? 'var(--color-danger)' : 'var(--color-safe)'};">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 22h20L12 2z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                </span>
+                                <span style="margin-left:8px; font-weight: 800;">厨房</span>
+                            </div>
+                            <span class="status-badge ${kitchenAlarmBadge}">${kitchenAlarmText}</span>
+                        </div>
+                        <div class="hub-card-summary">
+                            <div class="hub-summary-row">
+                                <div class="row-label-wrap">
+                                    <span class="row-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                    </span>
+                                    <span>可燃气含量</span>
+                                </div>
+                                <span class="row-value" style="color: ${deviceData.alarm_level > 0 ? 'var(--color-danger)' : 'var(--text-primary)'}">${deviceData.mq2_percent}<span class="unit">%</span></span>
+                            </div>
+                            <div class="hub-summary-row">
+                                <div class="row-label-wrap">
+                                    <span class="row-icon">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
+                                    </span>
+                                    <span>排气机组</span>
+                                </div>
+                                <span class="row-value">${deviceData.dev3_fan_state ? '● 运转中' : '○ 待命'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 2. 渲染客厅详情 (带内置历史记录账本)
+            let livingDetailCard = document.getElementById("livingDetailCard");
+            if (livingDetailCard) {
+                livingDetailCard.innerHTML = `
+                    <div class="line-gauge-container">
+                        <div class="line-gauge-item">
+                            <div class="gauge-meta">
+                                <span class="gauge-label">温度监测线</span>
+                                <span class="gauge-number">${deviceData.temp}<span>℃</span></span>
+                            </div>
+                            <div class="gauge-track">
+                                <!-- ★ 修正后的百分比物理数据填充算法 -->
+                                <div class="gauge-fill" style="width: ${tempPercent}%; background: var(--color-active);"></div>
+                            </div>
+                        </div>
+
+                        <div class="line-gauge-item">
+                            <div class="gauge-meta">
+                                <span class="gauge-label">湿度监测线</span>
+                                <span class="gauge-number">${deviceData.humi}<span>%</span></span>
+                            </div>
+                            <div class="gauge-track">
+                                <!-- ★ 修正后的百分比物理数据填充算法 -->
+                                <div class="gauge-fill" style="width: ${humiPercent}%; background: var(--glow-cyan);"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="state-grid">
+                        <div class="state-unit">
+                            <div class="state-label-wrap">
+                                <span class="state-label-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </span>
+                                <span class="state-label">门禁锁舌状态</span>
+                            </div>
+                            <span class="status-badge ${deviceData.dev1_door_state === 1 ? 'badge-danger' : 'badge-safe'}">
+                                ${deviceData.dev1_door_state === 1 ? '🔓 已开启' : '🔒 已闭锁'}
+                            </span>
+                        </div>
+
+                        <div class="state-unit">
+                            <div class="state-label-wrap">
+                                <span class="state-label-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line></svg>
+                                </span>
+                                <span class="state-label">客厅氛围蓝灯</span>
+                            </div>
+                            <span class="status-badge ${deviceData.dev1_blue_state ? 'badge-active' : 'badge-standby'}">
+                                ${deviceData.dev1_blue_state ? '● 已点亮' : '○ 已休眠'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="detail-ledger-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span>大门锁具防范动作历史账本</span>
+                    </div>
+                    <div class="detail-ledger-box" id="doorDetailLedger">
+                        <!-- 动态渲染客厅门禁历史 -->
+                    </div>
+                `;
+            }
+
+            // 3. 渲染卧室详情
+            let bedroomDetailCard = document.getElementById("bedroomDetailCard");
+            if (bedroomDetailCard) {
+                bedroomDetailCard.innerHTML = `
+                    <div class="line-gauge-container">
+                        <div class="line-gauge-item">
+                            <div class="gauge-meta">
+                                <span class="gauge-label">光学变送照度计</span>
+                                <span class="gauge-number">${light}<span>%</span></span>
+                            </div>
+                            <div class="gauge-track">
+                                <!-- ★ 修正后的百分比物理数据填充算法 -->
+                                <div class="gauge-fill" style="width: ${lightPercent}%; background: var(--glow-purple);"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="state-grid">
+                        <div class="state-unit">
+                            <div class="state-label-wrap">
+                                <span class="state-label-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line></svg>
+                                </span>
+                                <span class="state-label">卧室蓝灯</span>
+                            </div>
+                            <span class="status-badge ${deviceData.dev2_led_state ? 'badge-active' : 'badge-standby'}">
+                                ${deviceData.dev2_led_state ? '● 已点亮' : '○ 已关闭'}
+                            </span>
+                        </div>
+
+                        <div class="state-unit">
+                            <div class="state-label-wrap">
+                                <span class="state-label-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                                </span>
+                                <span class="state-label">强制新风开窗</span>
+                            </div>
+                            <span class="status-badge ${deviceData.dev2_force_open === 1 ? 'badge-active' : 'badge-standby'}">
+                                ${deviceData.dev2_force_open === 1 ? '● 已开启' : '○ 已关闭'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 4. 渲染厨房详情
+            let kitchenDetailCard = document.getElementById("kitchenDetailCard");
+            if (kitchenDetailCard) {
+                let cardEl = document.getElementById("viewKitchen").querySelector(".detail-card");
+                if (cardEl) {
+                    cardEl.className = `card glass-panel detail-card card-kitchen`;
+                    if (deviceData.alarm_level === 1) cardEl.classList.add('warning');
+                    if (deviceData.alarm_level === 2) cardEl.classList.add('danger');
+                }
+
+                let valveBadge = 'badge-safe';
+                let valveText = '🔒 正常通气';
+                if (deviceData.alarm_level > 0) {
+                    valveBadge = 'badge-danger';
+                    valveText = '🔐 泄漏物理切断';
+                }
+
+                kitchenDetailCard.innerHTML = `
+                    <div class="line-gauge-container">
+                        <div class="line-gauge-item">
+                            <div class="gauge-meta">
+                                <span class="gauge-label">可燃气体浓度数据线</span>
+                                <span class="gauge-number" style="color: ${deviceData.alarm_level > 0 ? 'var(--color-danger)' : 'var(--text-primary)'}">${deviceData.mq2_percent}<span>%</span></span>
+                            </div>
+                            <div class="gauge-track">
+                                <!-- ★ 修正后的百分比物理数据填充算法 -->
+                                <div class="gauge-fill" style="width: ${mq2Percent}%; background: ${deviceData.alarm_level > 0 ? 'var(--color-danger)' : 'var(--color-safe)'};"></div>
+                            </div>
+                        </div>
+
+                        <div class="line-gauge-item">
+                            <div class="gauge-meta">
+                                <span class="gauge-label">空气环境质量数据线</span>
+                                <span class="gauge-number">${deviceData.mq135_percent}<span>%</span></span>
+                            </div>
+                            <div class="gauge-track">
+                                <!-- ★ 修正后的百分比物理数据填充算法 -->
+                                <div class="gauge-fill" style="width: ${mq135Percent}%; background: var(--color-warn);"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="state-grid">
+                        <div class="state-unit">
+                            <div class="state-label-wrap">
+                                <span class="state-label-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 22h20L12 2z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                </span>
+                                <span class="state-label">安全切断闸阀</span>
+                            </div>
+                            <span class="status-badge ${valveBadge}">${valveText}</span>
+                        </div>
+
+                        <div class="state-unit">
+                            <div class="state-label-wrap">
+                                <span class="state-label-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line></svg>
+                                </span>
+                                <span class="state-label">厨房照明状态</span>
+                            </div>
+                            <span class="status-badge ${deviceData.dev3_led_state ? 'badge-active' : 'badge-standby'}">
+                                ${deviceData.dev3_led_state ? '● 已开启' : '○ 已关闭'}
+                            </span>
+                        </div>
+
+                        <div class="state-unit">
+                            <div class="state-label-wrap">
+                                <svg class="fan-svg ${deviceData.dev3_fan_state ? 'spinning' : ''}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
+                                <span class="state-label" style="margin-left: 10px;">烟感排风联动系统</span>
+                            </div>
+                            <span class="status-badge ${deviceData.dev3_fan_state ? 'badge-active' : 'badge-standby'}">
+                                ${deviceData.dev3_fan_state ? '● 高速排烟' : '○ 已关闭'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 厨房详情页特有：燃气预警历史归档账本 -->
+                    <div class="detail-ledger-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span>气防安防分级预警事件归档账本</span>
+                    </div>
+                    <div class="detail-ledger-box" id="gasDetailLedger">
+                        <!-- 动态渲染厨房安防事件历史 -->
+                    </div>
+                `;
+            }
+
+            // 联动渲染账本数据
+            renderLedger();
+        }
+
+        // ======================
+        // 初始化自启
+        // ======================
+        window.onload = function() {
+            runLiveWidgets(); 
+            
+            const savedUser = localStorage.getItem("currentUser");
+            if (savedUser) {
+                currentUser = savedUser;
+                enterDashboard();
+            }
+        };
+    </script>
+</body>
+</html>
+
+
+
